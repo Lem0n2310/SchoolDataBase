@@ -2,6 +2,7 @@ import psycopg2 as psy
 from datetime import datetime
 
 
+# сделать общий connect
 def first_connect():
     connect = psy.connect(
         # Настройки подключения к базе данных
@@ -34,7 +35,8 @@ def get_connect():
         password='School1234*',
     )
 
-    return connect
+
+connect = get_connect()
 
 
 def get_id(table):
@@ -44,20 +46,16 @@ def get_id(table):
         column = "orderId"
     else:
         column = "customerId"
-    connect = get_connect()
     cursor = connect.cursor()
     cursor.execute(f"""select {column} from  uskov_klyuchnikov.{table};""")
     result = cursor.fetchall()
     cursor.close()
-    connect.close()
-
     table_ids = [row[0] for row in result]
 
     return table_ids
 
 
 def get_table(table):
-    connect = get_connect()
     cursor = connect.cursor()
     cursor.execute(
         f"""select * from uskov_klyuchnikov.{table};"""
@@ -65,52 +63,47 @@ def get_table(table):
 
     result = cursor.fetchall()
     cursor.close()
-    connect.close()
-
     return result
 
 
 def add_driver_customer(who, first_name, second_name):
-    connect = get_connect()
     cursor = connect.cursor()
-    who_id = who+"Id"
-    who_table = who+"s"
+    who_id = who + "Id"
+    who_table = who + "s"
 
     cursor.execute(f"""select {who_id} from uskov_klyuchnikov.{who_table} order by {who_id} desc limit 1;""")
     id = int(cursor.fetchall()[0][0])
     cursor.execute(f"""
-        insert into uskov_klyuchnikov.{who_table} values ({id+1},'{first_name}', '{second_name}');
+        insert into uskov_klyuchnikov.{who_table} values ({id + 1},'{first_name}', '{second_name}');
         select {who_id} from uskov_klyuchnikov.{who_table} order by {who_id} desc limit 1;
     """)
 
     result = cursor.fetchall()[0][0]
     connect.commit()
     cursor.close()
-    connect.close()
     return f"Id: {result}"
 
 
 def add_order(
-    startDestination,
-    endDestination,
-    orderTime,
-    carNumber,
-    driverId,
-    customerId,
-    status
+        startDestination,
+        endDestination,
+        orderTime,
+        carNumber,
+        driverId,
+        customerId,
+        status
 ):
     orderTime = datetime.strptime(orderTime, "%Y-%m-%d %H:%M:%S.%f")
-    connect = get_connect()
     cursor = connect.cursor()
 
     all_drivers = get_id("drivers")
     all_customers = get_id("customers")
 
-    if not(driverId in all_drivers):
+    if not (driverId in all_drivers):
         print("Водителя с таким номером не существует")
-    elif not(customerId in all_customers):
+    elif not (customerId in all_customers):
         print("Пассажира с таким номером не существует")
-    elif not(customerId in all_customers and driverId in all_drivers):
+    elif not (customerId in all_customers and driverId in all_drivers):
         print("Ни водителя с таким номером не существует, ни пассажира с таким номером не существует")
     else:
         cursor.execute("""select orderId from uskov_klyuchnikov.taxi order by orderId desc limit 1;""")
@@ -130,11 +123,10 @@ def add_order(
         result = cursor.fetchall()[0][0]
         connect.commit()
         cursor.close()
-        connect.close()
         return f"Id: {result}"
 
+
 def update_order(orderId, status):
-    connect = get_connect()
     cursor = connect.cursor()
 
     all_orders = get_id("taxi")
@@ -145,11 +137,9 @@ def update_order(orderId, status):
     else:
         print("Заказа с таким номером не существует")
     cursor.close()
-    connect.close()
 
 
 def delete(table, id):
-    connect = get_connect()
     cursor = connect.cursor()
     permission = False
     if table == "drivers":
@@ -157,7 +147,7 @@ def delete(table, id):
         cursor.execute(f"""select driverId  from  uskov_klyuchnikov.taxi;""")
         result = cursor.fetchall()
         table_ids = [row[0] for row in result]
-        if not(id in table_ids): permission = True
+        if not (id in table_ids): permission = True
     elif table == "taxi":
         column = "orderId"
         permission = True
@@ -172,10 +162,9 @@ def delete(table, id):
         cursor.execute(f"""delete from uskov_klyuchnikov.{table} where {column} = {id};""")
         connect.commit()
         cursor.close()
-        connect.close()
         print("Успешно")
-
 
 
 if __name__ == '__main__':
     print(get_table("taxi"))
+    connect.close()
