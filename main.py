@@ -1,4 +1,5 @@
 import psycopg2 as psy
+from psycopg2 import sql
 from datetime import datetime
 
 
@@ -25,18 +26,14 @@ def first_connect():
         connect.commit()
 
 
-def get_connect():
-    connect = psy.connect(
-        # Настройки подключения к базе данных
-        host='79.174.88.238',
-        port=15221,
-        dbname='school_db',
-        user='school',
-        password='School1234*',
-    )
-
-
-connect = get_connect()
+connect = psy.connect(
+    # Настройки подключения к базе данных
+    host='79.174.88.238',
+    port=15221,
+    dbname='school_db',
+    user='school',
+    password='School1234*',
+)
 
 
 def get_id(table):
@@ -72,16 +69,17 @@ def add_driver_customer(who, first_name, second_name):
     who_table = who + "s"
 
     cursor.execute(f"""select {who_id} from uskov_klyuchnikov.{who_table} order by {who_id} desc limit 1;""")
-    id = int(cursor.fetchall()[0][0])
     cursor.execute(f"""
-        insert into uskov_klyuchnikov.{who_table} values ({id + 1},'{first_name}', '{second_name}');
+        insert into uskov_klyuchnikov.{who_table} values ((SELECT COALESCE(MIN(t1.id) + 1, 1) 
+     FROM uskov_klyuchnikov.{who_table} t1 
+     WHERE NOT EXISTS (SELECT 1 FROM my_table t2 WHERE t2.id = t1.id + 1)),'{first_name}', '{second_name}');
         select {who_id} from uskov_klyuchnikov.{who_table} order by {who_id} desc limit 1;
     """)
 
     result = cursor.fetchall()[0][0]
     connect.commit()
     cursor.close()
-    return f"Id: {result}"
+    return result
 
 
 def add_order(
